@@ -261,6 +261,10 @@ Comprehensive documentation is available in the `docs/` directory:
 
 MIT
 
+## Contributors
+
+- [@yifei607](https://github.com/yifei607) - Project Development and RAG System Implementation
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
