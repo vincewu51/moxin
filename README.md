@@ -47,7 +47,8 @@ source $HOME/.local/bin/env  # Add uv to PATH
 
 ```bash
 # Clone the repository
-cd /home/yifeng/moxin  # or your project directory
+git clone https://github.com/vincewu51/moxin.git
+cd moxin
 
 # Create virtual environment with uv
 uv venv
@@ -71,7 +72,7 @@ nano .env  # or use your preferred editor
 
 **Required settings in `.env`:**
 - `OPENROUTER_API_KEY` - Your OpenRouter API key
-- `NOVEL_PATH` - Path to your novel file (default: `/home/yifeng/Downloads/明朝败家子/明朝败家子.txt`)
+- `NOVEL_PATH` - Path to your novel file
 
 #### 4. Index your novel
 
@@ -79,7 +80,7 @@ Before you can use the AI features, you need to index your novel into the RAG sy
 
 ```bash
 # Index your novel with local BGE-M3 model (best quality, slower)
-python src/cli/index_novel.py --novel "/home/yifeng/Downloads/明朝败家子/明朝败家子.txt"
+python src/cli/index_novel.py --novel "path/to/your/novel.txt"
 
 # Or use environment variable from .env
 python src/cli/index_novel.py
@@ -107,11 +108,11 @@ The indexing process will:
 4. Generate embeddings using local or cloud API models
 5. Store everything in ChromaDB for fast retrieval
 
-**Indexing Time**:
-- **OpenRouter API**: 5-10 minutes (~$0.15 for a 17MB novel with openrouter-small)
-- **Local BGE-M3 (CPU)**: 30-45 minutes
-- **Local BGE-M3 (GPU)**: 5-10 minutes (requires compatible GPU)
-- **Local MiniLM (CPU)**: 10-15 minutes (lower quality)
+**Indexing Time** (varies by novel size):
+- **OpenRouter API**: Fast (minutes, small API cost)
+- **Local BGE-M3 (CPU)**: Slower (30-45 minutes for medium novels)
+- **Local BGE-M3 (GPU)**: Fast (5-10 minutes, requires compatible GPU)
+- **Local MiniLM (CPU)**: Medium (10-15 minutes, lower quality)
 
 ### Project Structure
 
@@ -154,7 +155,7 @@ Moxin supports multiple embedding models optimized for different use cases:
 
 **Recommendations**:
 - **Local**: Use `bge-m3` for production (best quality), `minilm` for development/testing
-- **Cloud**: Use `openrouter-small` for fast indexing (~5-10 min, ~$0.15), `openrouter-large` for highest quality
+- **Cloud**: Use `openrouter-small` for fast indexing, `openrouter-large` for highest quality
 
 **Note**: Cloud API models require an OpenRouter API key in your `.env` file.
 
@@ -220,7 +221,7 @@ QDRANT_URL=https://your-cluster.qdrant.io:6333
 ```
 
 This will:
-- ✅ Migrate your 12,410 indexed chunks to Qdrant Cloud
+- ✅ Migrate your indexed chunks to Qdrant Cloud
 - ✅ Set up a Gradio web interface
 - ✅ Prepare files for HuggingFace Spaces deployment
 
@@ -230,7 +231,7 @@ This will:
 - 🔍 Semantic search across your entire novel
 - 🌐 Public web interface accessible from anywhere
 - ⚡ Fast cloud-based vector search
-- 💰 ~$0.50/month operating cost
+- 💰 Low operating cost (pay per query)
 
 **Example Live App:** [Demo Space](https://huggingface.co/spaces/example/moxin-novel-query)
 
@@ -238,8 +239,8 @@ This will:
 
 | Option | Backend | Frontend | Cost | Setup Time |
 |--------|---------|----------|------|------------|
-| **Phase 1** | Qdrant Cloud API | None (API only) | Free | 5 min |
-| **Phase 2** | Qdrant Cloud | Gradio on HF Spaces | ~$0.50/mo | 15 min |
+| **Phase 1** | Qdrant Cloud API | None (API only) | Free tier available | 5 min |
+| **Phase 2** | Qdrant Cloud | Gradio on HF Spaces | Free tier + query costs | 15 min |
 
 ### Detailed Guides
 
