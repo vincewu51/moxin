@@ -72,3 +72,4 @@ dmypy.json
 
 # OS
 Thumbs.db
+data/embeddings_openrouter/

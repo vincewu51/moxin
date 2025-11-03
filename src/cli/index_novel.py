@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.novel.parser import NovelParser
 from src.rag.chunker import DocumentChunker
-from src.rag.embeddings import EmbeddingModel
+from src.rag.embeddings import EmbeddingModel, OpenRouterEmbeddings
 from src.rag.vectorstore import NovelVectorStore
 
 # Load environment variables
@@ -107,12 +107,35 @@ def index_novel(
 
         # 4. Generate embeddings
         console.print(f"\n🧠 Loading embedding model: [cyan]{embedding_model}[/cyan]")
-        embedding_gen = EmbeddingModel(model_name=embedding_model)
-        model_info = embedding_gen.get_model_info()
 
-        console.print(f"   Model: {model_info['model_name']}")
-        console.print(f"   Dimensions: {model_info['dimensions']}")
-        console.print(f"   Device: {model_info['device']}")
+        # Check if using OpenRouter embeddings
+        is_openrouter = embedding_model.startswith("openrouter-")
+
+        if is_openrouter:
+            # Use OpenRouter API for embeddings
+            embedding_gen = OpenRouterEmbeddings(model=embedding_model)
+            model_info = embedding_gen.get_model_info()
+
+            console.print(f"   Model: {model_info['model_name']}")
+            console.print(f"   Dimensions: {model_info['dimensions']}")
+            console.print(f"   Provider: {model_info['provider']}")
+            console.print(f"   Cost: ${model_info['cost_per_1m_tokens']}/1M tokens")
+
+            # Estimate cost
+            total_tokens = sum(chunk.token_count for chunk in chunks)
+            if isinstance(model_info.get('cost_per_1m_tokens'), (int, float)):
+                estimated_cost = (total_tokens / 1_000_000) * model_info['cost_per_1m_tokens']
+                console.print(f"   Estimated cost: [yellow]~${estimated_cost:.3f}[/yellow] ({total_tokens:,} tokens)")
+            else:
+                console.print(f"   Total tokens: {total_tokens:,}")
+        else:
+            # Use local embedding model
+            embedding_gen = EmbeddingModel(model_name=embedding_model)
+            model_info = embedding_gen.get_model_info()
+
+            console.print(f"   Model: {model_info['model_name']}")
+            console.print(f"   Dimensions: {model_info['dimensions']}")
+            console.print(f"   Device: {model_info['device']}")
 
         # Generate embeddings with progress bar
         console.print(f"\n⚡ Generating embeddings for {len(chunks)} chunks...")
@@ -128,11 +151,20 @@ def index_novel(
         ) as progress:
             task = progress.add_task("Embedding...", total=len(chunks))
 
-            embeddings = embedding_gen.encode(
-                chunk_texts,
-                batch_size=32,
-                show_progress=False
-            )
+            if is_openrouter:
+                # OpenRouter API: batch size 100, show progress in logs
+                embeddings = embedding_gen.encode(
+                    chunk_texts,
+                    batch_size=100,
+                    show_progress=True
+                )
+            else:
+                # Local model: batch size 32, no progress bar (we have our own)
+                embeddings = embedding_gen.encode(
+                    chunk_texts,
+                    batch_size=32,
+                    show_progress=False
+                )
 
             progress.update(task, completed=len(chunks))
 
@@ -192,11 +224,17 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Index with default settings
+  # Index with default settings (local BGE-M3 model)
   python index_novel.py --novel /path/to/novel.txt
 
-  # Use specific embedding model and custom output
+  # Use specific local embedding model and custom output
   python index_novel.py --novel /path/to/novel.txt --model jina-v2 --output ./my_db
+
+  # Use OpenRouter API for fast cloud-based embeddings
+  python index_novel.py --novel /path/to/novel.txt --model openrouter-small
+
+  # Use OpenRouter large model for higher quality embeddings
+  python index_novel.py --novel /path/to/novel.txt --model openrouter-large
 
   # Clear existing data and re-index
   python index_novel.py --novel /path/to/novel.txt --clear
@@ -232,7 +270,7 @@ Examples:
         "--model",
         type=str,
         default=None,
-        help="Embedding model: bge-m3, jina-v2, minilm (default: from EMBEDDING_MODEL env or bge-m3)"
+        help="Embedding model: bge-m3, jina-v2, minilm (local) or openrouter-small, openrouter-large (cloud API) (default: from EMBEDDING_MODEL env or bge-m3)"
     )
 
     parser.add_argument(
